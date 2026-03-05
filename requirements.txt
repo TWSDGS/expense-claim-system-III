@@ -1,0 +1,11 @@
+streamlit>=1.36.0
+pandas>=2.1.0
+openpyxl>=3.1.2
+reportlab>=4.0.9
+pillow>=10.2.0
+python-dotenv>=1.0.1
+msal>=1.28.0
+requests>=2.32.0
+gspread>=6.1.2
+google-auth>=2.34.0
+pypdf>=4.3.1

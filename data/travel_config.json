@@ -1,0 +1,10 @@
+{
+  "backend": "google",
+  "google": {
+    "spreadsheet_id": "1ogYwqYP7i57B8q8Vxt-RwRHGhRVuPb1GWuYG91aZeAA",
+    "submit_sheet_name": "DomesticTrip",
+    "draft_sheet_name": "DomesticTrip_Draft",
+    "apps_script_url": "https://script.google.com/macros/s/AKfycbwIqK7qTNiYjFPopwrJ9OIQbFWdT1hmr_IgPwU8iOtDLQCQF-P3xQ2rQGOAs4Wal7qc/exec",
+    "api_key": ""
+  }
+}

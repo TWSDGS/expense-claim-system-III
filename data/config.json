@@ -1,0 +1,10 @@
+{
+  "backend": "google",
+  "google": {
+    "spreadsheet_id": "1i8Iw8dTfrKGpCOdxMXl5d2QMgOD7VbA84UEPRjBc_zw",
+    "submit_sheet_name": "申請表單",
+    "draft_sheet_name": "草稿列表",
+    "apps_script_url": "https://script.google.com/macros/s/AKfycbxJjuJPg6CXECoeKTm4o_-TYW05vAAj_0V3J8a-KTMImksXMeXe9YOR270TElT_srPu/exec",
+    "api_key": ""
+  }
+}
