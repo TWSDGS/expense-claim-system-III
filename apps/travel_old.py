@@ -88,6 +88,14 @@ def inject_travel_ui_css() -> None:
         unsafe_allow_html=True,
     )
 
+def get_current_user_email() -> str:
+    """Streamlit Community Cloud user email (lowercased)."""
+    try:
+        u = getattr(st, "experimental_user", None)
+        email = getattr(u, "email", "") if u else ""
+        return (email or "").strip().lower()
+    except Exception:
+        return ""
 
 def _auto_download_pdf(pdf_bytes: bytes, filename: str) -> None:
     """One-click PDF download via JS."""
@@ -1199,6 +1207,7 @@ def page_edit():
             if rec.get("status") != "submitted":
                 rec["status"] = "draft"
 
+        rec["user_email"] = get_current_user_email()  # ✅ 新增
         upsert_local_record(rec)
 
         # cloud
