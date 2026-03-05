@@ -459,7 +459,7 @@ def sidebar_settings(cfg: dict) -> dict:
             st.session_state["travel_new_nonce"] = st.session_state.get("travel_new_nonce", 0) + 1
         st.rerun()
 
-    if st.sidebar.button(("✅ " if current_page == "new" else "") + "📝 新增表單（預設）", use_container_width=True, key="t_nav_new"):
+    if st.sidebar.button(("✅ " if current_page == "new" else "") + "📝 新增表單", use_container_width=True, key="t_nav_new"):
         _go("new")
     if st.sidebar.button(("✅ " if current_page == "drafts" else "") + "📄 草稿列表", use_container_width=True, key="t_nav_drafts"):
         _go("drafts")
@@ -598,7 +598,7 @@ def render_records_table(view: pd.DataFrame, *, scope: str, mode: str):
 # Pages
 # ----------------------------
 def page_list(is_draft_mode=False):
-    st.header("草稿列表" if is_draft_mode else "表單列表/查詢")
+    st.header("草稿列表" if is_draft_mode else "已送出表單列表")
     inject_travel_ui_css()
     df = get_local_df()
     if df.empty:
@@ -920,7 +920,25 @@ def page_edit():
                 st.text_input("車號（公務車）", value=st.session_state[ss_bind("gov_car_no", "")], key=ss_bind("gov_car_no"))
         with b:
             if "私車公用" in sel:
-                st.number_input("里程數（公里）", min_value=0.0, value=float(st.session_state[ss_bind("private_car_km", 0.0)] or 0.0), step=1.0, key=ss_bind("private_car_km"))
+				# --- [FIX] safe numeric coercion for number_input keys (avoid '' < 0.0 TypeError) ---
+				def _safe_float(v, default: float = 0.0) -> float:
+				    try:
+				        if v is None:
+				            return default
+				        if isinstance(v, str) and v.strip() == "":
+				            return default
+				        return float(v)
+				    except Exception:
+				        return default
+				
+				private_car_km_key = ss_bind("private_car_km")
+				
+				# Normalize session_state BEFORE instantiating the widget
+				if private_car_km_key not in st.session_state:
+				    st.session_state[private_car_km_key] = 0.0
+				else:
+				    st.session_state[private_car_km_key] = _safe_float(st.session_state[private_car_km_key], 0.0)
+				st.number_input("里程數（公里）", min_value=0.0, step=1.0, key=private_car_km_key,)
                 st.text_input("車號（私車）", value=st.session_state[ss_bind("private_car_no", "")], key=ss_bind("private_car_no"))
             if "其他" in sel:
                 st.text_input("其他說明", value=st.session_state[ss_bind("other_transport_desc", "")], key=ss_bind("other_transport_desc"))
