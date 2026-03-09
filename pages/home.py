@@ -25,7 +25,7 @@ with c1:
 
 with c2:
     st.subheader("🚆 出差報帳系統")
-    st.write("國內/國外出差申請、交通費與膳雜費明細報銷等。")
+    st.write("國內出差申請、交通費與膳雜費明細報銷等。")
     if st.button("進入 出差報帳", use_container_width=True, type="primary"):
         st.switch_page("apps/travel_old.py")
 
