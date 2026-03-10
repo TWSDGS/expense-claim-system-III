@@ -39,6 +39,25 @@ ATTACH_DIR.mkdir(exist_ok=True, parents=True)
 # UI toggles
 HIDE_APPROVAL_FIELDS = True  # Hide approval/sign-off fields in forms
 
+# ----------------------------
+# Admin access (for permanent remove)
+# ----------------------------
+def _current_email() -> str:
+    try:
+        u = getattr(st, 'experimental_user', None)
+        return (getattr(u, 'email', '') or '').strip().lower() if u else ''
+    except Exception:
+        return ''
+
+def _is_admin() -> bool:
+    raw = ''
+    try:
+        raw = str(st.secrets.get('ADMIN_EMAILS', ''))
+    except Exception:
+        raw = ''
+    admins = {e.strip().lower() for e in raw.split(',') if e.strip()}
+    return bool(admins) and (_current_email() in admins)
+
 
 def get_current_user_email() -> str:
     try:
@@ -667,7 +686,7 @@ def render_records_table(view: pd.DataFrame, *, scope: str, mode: str):
         row[8].write(str(r.get("updated_at", "")))
 
         with row[9]:
-            b1, b2, b3, b4 = st.columns(4)
+            b1, b2, b3, b4, b5 = st.columns(5)
 
             with b1:
                 if st.button("編輯", key=f"{scope}_edit_{rid}", use_container_width=True):
@@ -896,6 +915,32 @@ def page_new():
 
 
 
+
+            with b5:
+                if _is_admin():
+                    with st.popover("移除", use_container_width=True):
+                        st.warning("⚠️ 這會永久刪除該筆資料（本機 Excel + 雲端 Google Sheet），無法復原。")
+                        ok = st.checkbox("我確認要永久移除", key=f"{scope}_rm_ok_{rid}")
+                        if st.button("確認移除", key=f"{scope}_rm_do_{rid}", disabled=not ok, use_container_width=True):
+                            # local hard delete
+                            try:
+                                delete_local_record(str(LOCAL_XLSX), rid)
+                            except Exception as e:
+                                st.error(f"本機移除失敗：{e}")
+                                st.stop()
+
+                            # cloud hard delete (best-effort)
+                            if cloud_enabled(cfg):
+                                g = cloud_config(cfg)
+                                target_sheet = g["submit_sheet_name"] if mode == "submitted" else g["draft_sheet_name"]
+                                okc, msg = safe_cloud_delete(cfg, target_sheet, rid)
+                                if not okc:
+                                    st.warning(f"雲端移除失敗（本機已刪除）：{msg}")
+
+                            st.success(f"已移除 {rid}")
+                            st.rerun()
+                else:
+                    st.button("移除", key=f"{scope}_rm_na_{rid}", disabled=True, use_container_width=True)
 def page_drafts():
     st.header("草稿列表")
     df = get_local_df()
@@ -1082,7 +1127,7 @@ def page_edit():
             st.caption("請先確認表單日期、填表人、計畫編號與事由說明。")
 
             form_date = st.date_input(
-                "表單日期 *",
+                "填寫日期 *",
                 value=date.fromisoformat(st.session_state[key_prefix + "form_date"]),
                 key=key_prefix + "form_date_ui",
             )
@@ -1499,4 +1544,3 @@ def mark_deleted(record_id: str, cfg: dict):
         g = cloud_config(cfg)
         safe_cloud_upsert(cfg, g['draft_sheet_name'], r)
     return True, 'marked_deleted'
-

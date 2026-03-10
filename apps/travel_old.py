@@ -449,6 +449,25 @@ st.markdown("<style>.stButton>button{width:100%;} .tight-buttons .stButton>butto
 # UI toggles
 HIDE_APPROVAL_FIELDS = True  # Hide approval/sign-off fields in forms
 
+# ----------------------------
+# Admin access (for permanent remove)
+# ----------------------------
+def _current_email() -> str:
+    try:
+        u = getattr(st, 'experimental_user', None)
+        return (getattr(u, 'email', '') or '').strip().lower() if u else ''
+    except Exception:
+        return ''
+
+def _is_admin() -> bool:
+    raw = ''
+    try:
+        raw = str(st.secrets.get('ADMIN_EMAILS', ''))
+    except Exception:
+        raw = ''
+    admins = {e.strip().lower() for e in raw.split(',') if e.strip()}
+    return bool(admins) and (_current_email() in admins)
+
 
 def sidebar_settings(cfg: dict) -> dict:
     """Sidebar: keep it simple (no Google Sheet config UI), match the requested style/order."""
@@ -547,7 +566,7 @@ def render_records_table(view: pd.DataFrame, *, scope: str, mode: str):
         row[7].write(str(r.get("updated_at", "")))
 
         with row[8]:
-            b1, b2, b3, b4 = st.columns(4)
+            b1, b2, b3, b4, b5 = st.columns(5)
 
             with b1:
                 if st.button("編輯", key=f"{scope}_edit_{rid}", use_container_width=True):
@@ -601,6 +620,34 @@ def render_records_table(view: pd.DataFrame, *, scope: str, mode: str):
                             safe_cloud_delete(cfg, g["draft_sheet_name"], rid)
                         st.success(f"已刪除 {rid}")
                         st.rerun()
+            with b5:
+                if _is_admin():
+                    with st.popover("移除", use_container_width=True):
+                        st.warning("⚠️ 這會永久移除該筆資料（本機 Excel + 雲端 Google Sheet），無法復原。")
+                        ok = st.checkbox("我確認要永久移除", key=f"{scope}_rm_ok_{rid}")
+                        if st.button("確認移除", key=f"{scope}_rm_do_{rid}", disabled=not ok, use_container_width=True):
+                            # local hard delete: determine which sheet holds it
+                            try:
+                                if mode == "submitted":
+                                    delete_travel_record(str(LOCAL_XLSX), rid, g["submit_sheet_name"])
+                                else:
+                                    delete_travel_record(str(LOCAL_XLSX), rid, g["draft_sheet_name"])
+                            except Exception as e:
+                                st.error(f"本機移除失敗：{e}")
+                                st.stop()
+
+                            # cloud hard delete (best-effort)
+                            if cloud_enabled(cfg):
+                                target_sheet = g["submit_sheet_name"] if mode == "submitted" else g["draft_sheet_name"]
+                                okc, msg = safe_cloud_delete(cfg, target_sheet, rid)
+                                if not okc:
+                                    st.warning(f"雲端移除失敗（本機已刪除）：{msg}")
+
+                            st.success(f"已移除 {rid}")
+                            st.rerun()
+                else:
+                    st.button("移除", key=f"{scope}_rm_na_{rid}", disabled=True, use_container_width=True)
+
 
 # ----------------------------
 # Pages
@@ -816,7 +863,14 @@ def page_edit():
             st.markdown(f"<div class='travel-sub'>登入信箱：<b>{_email}</b></div>", unsafe_allow_html=True)
             st.session_state[ss_bind("user_email", _email)] = _email
 
-        c1, c2, c3 = st.columns([1.2, 1.0, 1.0])
+        c0, c1, c2, c3 = st.columns([1.0, 1.2, 1.0, 1.0])
+        with c0:
+            st.date_input(
+                "填寫日期 *",
+                value=date.fromisoformat(str(st.session_state.get(ss_bind("form_date", date.today().isoformat())))),
+                key=ss_bind("form_date"),
+                format="YYYY/MM/DD",
+            )
         with c1:
             st.text_input("出差人姓名 *", value=st.session_state[ss_bind("traveler_name", "")], key=ss_bind("traveler_name"))
         with c2:
