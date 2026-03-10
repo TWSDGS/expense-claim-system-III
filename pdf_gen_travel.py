@@ -410,7 +410,7 @@ def build_pdf_bytes(record: Dict, attachment_paths: Optional[List[str]] = None) 
     # NOTE: The template has a separate "其它" column and a rightmost "單據編號" column.
     # Use a dedicated boundary for the end of "其它" so amounts and receipt numbers don't overlap.
     X_OTHER = 1185
-    X_RECEIPT = 1265
+    X_RECEIPT = 1185
     X_RIGHT = 1344
 
     # Row boundaries for 10 detail rows
